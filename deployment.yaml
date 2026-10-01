@@ -1,12 +1,12 @@
 schema_version: '0.4'
 document_type: deployment_binding
-updated_at: '2026-10-01T14:08:50Z'
+updated_at: '2026-10-01T14:10:52Z'
 deployment:
   id: learning-os-production
   topology: split
-  epoch: 5
+  epoch: 6
   write_state: frozen
 core:
   repository_id: 1343815302
-  commit: 64096afd77699dacbf44450703e7ed48cd0d2661
+  commit: dc59ef36b75888166c7f38917359086b490dd847
   repository_full_name: Combo-AI-Coder/learning-os-core
