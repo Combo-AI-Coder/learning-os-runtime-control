@@ -1,11 +1,11 @@
 schema_version: '0.4'
 document_type: deployment_binding
-updated_at: '2026-10-02T07:35:03Z'
+updated_at: '2026-10-02T07:35:04Z'
 deployment:
   id: learning-os-production
   topology: split
   epoch: 7
-  write_state: frozen
+  write_state: active
 core:
   repository_id: 1343815302
   commit: abc7f2d4fd84342b41930a6b2461018e50cde1db
