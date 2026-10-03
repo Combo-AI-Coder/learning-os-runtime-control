@@ -10,3 +10,5 @@ credentials are forbidden here.
 Repository names are navigation metadata. Numeric repository IDs are security
 identity. Ordinary Runtime may read this repository but has no write
 capability; deployment mutation is a narrow maintenance CAS.
+
+Publication validation and its non-deployment boundary: [Transition CI](docs/TRANSITION-CI.md).

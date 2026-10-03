@@ -14,9 +14,18 @@ env:
 
 jobs:
   validate-runtime-control:
+    needs: validate-transition
+    if: ${{ always() }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - name: Require the publication transition check
+        env:
+          TRANSITION_RESULT: ${{ needs.validate-transition.result }}
+        run: test "$TRANSITION_RESULT" = success
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
       - run: python -m pip install "PyYAML>=6.0,<7"
       - name: Verify stable repository identity
         shell: bash
@@ -38,7 +47,7 @@ jobs:
           core_id="${binding[0]}"
           core_commit="${binding[1]}"
           test "$core_id" = "$TRUSTED_CORE_REPOSITORY_ID"
-          clone_url="$(python - <<'PY'
+          clone_url="$(python -I - <<'PY'
           import json
           import os
           import urllib.request
@@ -139,3 +148,64 @@ jobs:
               raise SystemExit("wrong Core commit was accepted")
           print("negative identity/type controls PASS")
           PY
+
+  validate-transition:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install "PyYAML>=6.0,<7"
+      - name: Recover accepted baseline from the event, not PR-controlled fields
+        id: baseline
+        shell: bash
+        run: |
+          test "$GITHUB_REPOSITORY_ID" = "$TRUSTED_SELF_REPOSITORY_ID"
+          python -I ci/transition_gate.py prepare \
+            --event-name "$GITHUB_EVENT_NAME" --event-path "$GITHUB_EVENT_PATH" \
+            --current-sha "$GITHUB_SHA" \
+            --previous-out "$RUNNER_TEMP/previous-deployment.yaml" >> "$GITHUB_OUTPUT"
+      - name: Fetch the previously accepted validator by numeric identity and exact pin
+        shell: bash
+        env:
+          BASELINE_CORE_COMMIT: ${{ steps.baseline.outputs.core_commit }}
+          GITHUB_API_TOKEN: ${{ github.token }}
+        run: |
+          clone_url="$(python -I - <<'PYCODE'
+          import json, os, re, urllib.request
+          rid = int(os.environ["TRUSTED_CORE_REPOSITORY_ID"])
+          request = urllib.request.Request(
+              f"https://api.github.com/repositories/{rid}",
+              headers={"Authorization": f"Bearer {os.environ['GITHUB_API_TOKEN']}",
+                       "Accept": "application/vnd.github+json"},
+          )
+          with urllib.request.urlopen(request, timeout=30) as response:
+              data = json.load(response)
+          if type(data.get("id")) is not int or data["id"] != rid:
+              raise SystemExit("GitHub repository identity mismatch")
+          url = data.get("clone_url", "")
+          if not re.fullmatch(r"https://github.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\.git", url):
+              raise SystemExit("unexpected public Core clone URL")
+          print(url)
+          PYCODE
+          )"
+          git init "$RUNNER_TEMP/baseline-core"
+          git -C "$RUNNER_TEMP/baseline-core" remote add origin "$clone_url"
+          git -C "$RUNNER_TEMP/baseline-core" fetch --depth 1 origin "$BASELINE_CORE_COMMIT"
+          git -C "$RUNNER_TEMP/baseline-core" checkout --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/baseline-core" rev-parse HEAD)" = "$BASELINE_CORE_COMMIT"
+      - name: Enforce one valid transition per publication using the accepted Core
+        run: >-
+          python -I ci/transition_gate.py check
+          --previous "$RUNNER_TEMP/previous-deployment.yaml"
+          --current-sha "$GITHUB_SHA"
+          --trusted-core-root "$RUNNER_TEMP/baseline-core"
+      - name: Run synthetic transition and event-selection regressions
+        env:
+          TRUSTED_CORE_ROOT: ${{ runner.temp }}/baseline-core
+        run: python -m unittest discover -s tests -v
