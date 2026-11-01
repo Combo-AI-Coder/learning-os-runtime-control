@@ -5,7 +5,7 @@ deployment:
   id: learning-os-production
   topology: split
   epoch: 11
-  write_state: frozen
+  write_state: active
 core:
   repository_id: 1343815302
   commit: 66a6b5487ca03b2d0464df7e4a019f571a85632b
