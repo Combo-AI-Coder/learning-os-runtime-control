@@ -36,26 +36,13 @@ active-to-active Core promotion that the former snapshot-only CI accepted.
 The `check` CLI additionally verifies the actual validator checkout SHA against
 the prior contract. Run `python ci/transition_gate.py --help` for its two phases.
 
-## Evidence and limits
+## Scope and compatibility
 
 Baseline: Runtime-Control `9a3e3102f0de1856c26faca88d26d8b812554aff`, Core
-`d1ab86a4d0192bcdbf5bed84405f07af401d848c` (2026-10-03 audit).
-The regression proves that a document can be individually valid while its
-publication transition is invalid. It does not claim an invalid production
-transition occurred.
+`d1ab86a4d0192bcdbf5bed84405f07af401d848c` (2026-10-03). The gate relies on
+repository workflow and branch protection and reviewer trust.
 
-This is CI admission evidence, not deployment execution or learner acceptance.
-Host admission closure, drain, exact-pin installation, target CAS, maintenance
-authority and post-restore readback remain separate obligations. Workflow/branch
-protection and reviewer trust remain required; this is not a service-side lock
-against a malicious maintainer who can replace the workflow. CI does not mutate
-`deployment.yaml`, Runtime hosts or learner state.
-
-A future schema migration incompatible with the accepted Core needs an explicit
-reviewed migration path, not a fallback to candidate self-validation. Revisit this
-bootstrap adapter when Core provides a native publication validator; preserve the
-independent accepted-base obligation if the adapter is retired.
-
-Event semantics: GitHub's official `pull_request` workflow-event documentation
-and `push` webhook payload definition (`base.sha`, merge checkout, `before` and
-`after`) were checked on 2026-10-03.
+A future schema migration incompatible with the accepted Core requires an
+explicit reviewed migration path rather than falling back to candidate
+self-validation. If Core later provides a native publication validator, preserve
+the independent accepted-base obligation when retiring this bootstrap adapter.
